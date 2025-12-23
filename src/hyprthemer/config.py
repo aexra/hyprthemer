@@ -72,17 +72,22 @@ def load_config(config_path: Optional[Path] = None) -> Config:
     
     themes = []
     for theme_data in themes_data:
-        if 'name' not in theme_data:
-            raise ConfigError("Theme missing required 'name' field")
         if 'wallpaper' not in theme_data:
-            raise ConfigError(f"Theme '{theme_data['name']}' missing required 'wallpaper' field")
+            theme_name = theme_data.get('name', 'unknown')
+            raise ConfigError(f"Theme '{theme_name}' missing required 'wallpaper' field")
         
         wallpaper_path = expand_path(theme_data['wallpaper'])
         if not wallpaper_path.exists():
+            theme_name = theme_data.get('name', wallpaper_path.name)
             raise ConfigError(f"Wallpaper not found: {wallpaper_path}")
         
+        # Generate theme name from wallpaper filename if not specified
+        theme_name = theme_data.get('name')
+        if not theme_name:
+            theme_name = wallpaper_path.stem
+        
         themes.append(ThemeConfig(
-            name=theme_data['name'],
+            name=theme_name,
             wallpaper=str(wallpaper_path),
             post_hooks=theme_data.get('post_hooks', [])
         ))
@@ -113,12 +118,16 @@ post_hooks = [
 ]
 
 # Define your themes below
+# If 'name' is omitted, it will be generated from wallpaper filename (without extension)
 [[themes]]
-name = "example-theme"
-wallpaper = "~/wallpapers/example.jpg"
+wallpaper = "~/wallpapers/tokyo-night.jpg"
+# name = "tokyo-night"  # Optional: auto-generated from filename if not specified
+
+[[themes]]
+wallpaper = "~/wallpapers/nord.png"
 # Theme-specific hooks (run after default hooks)
 post_hooks = [
-    "notify-send 'Theme applied: example-theme'"
+    "notify-send 'Theme applied: nord'"
 ]
 '''
 
