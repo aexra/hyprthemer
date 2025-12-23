@@ -39,18 +39,12 @@ def list_themes():
 
 @cli.command()
 @click.argument('theme_name')
-@click.option('--monitor', '-m', help='Apply to specific monitor')
-@click.option('--all', 'all_monitors', is_flag=True, help='Apply to all monitors')
+@click.option('--monitor', '-m', help='Apply to specific monitor (default: all monitors)')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
-def apply(theme_name: str, monitor: str, all_monitors: bool, verbose: bool):
-    """Apply a theme to monitor(s)."""
-    if not monitor and not all_monitors:
-        click.echo("Error: Must specify --monitor or --all", err=True)
-        raise SystemExit(1)
-    
-    if monitor and all_monitors:
-        click.echo("Error: Cannot use both --monitor and --all", err=True)
-        raise SystemExit(1)
+def apply(theme_name: str, monitor: str, verbose: bool):
+    """Apply a theme to monitor(s). Without -m applies to all monitors."""
+    # If no monitor specified, apply to all
+    all_monitors = monitor is None
     
     try:
         config = load_config()

@@ -52,10 +52,7 @@ def apply_theme(
         )
     
     # Determine target monitors
-    if all_monitors:
-        target_monitors = get_monitor_names()
-        monitor_env = "all"
-    elif monitor:
+    if monitor:
         if not validate_monitor(monitor):
             return ApplyResult(
                 success=False,
@@ -67,13 +64,10 @@ def apply_theme(
         target_monitors = [monitor]
         monitor_env = monitor
     else:
-        return ApplyResult(
-            success=False,
-            theme_name=theme_name,
-            monitors=[],
-            hook_results=[],
-            error="Must specify --monitor or --all"
-        )
+        # No specific monitor = all monitors
+        target_monitors = get_monitor_names()
+        monitor_env = "all"
+        all_monitors = True
     
     # Load and update state
     state = load_state(config.state_path)
