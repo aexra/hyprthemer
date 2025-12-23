@@ -21,7 +21,8 @@ def cli():
 
 
 @cli.command('list')
-def list_themes():
+@click.option('--names-only', '-n', is_flag=True, help='Output only theme names (for wofi/dmenu)')
+def list_themes(names_only: bool):
     """List available themes."""
     try:
         config = load_config()
@@ -29,12 +30,16 @@ def list_themes():
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
     
-    click.echo("Available themes:")
-    for theme in config.themes:
-        click.echo(f"  {theme.name}")
-        click.echo(f"    wallpaper: {theme.wallpaper}")
-        if theme.post_hooks:
-            click.echo(f"    hooks: {len(theme.post_hooks)}")
+    if names_only:
+        for theme in config.themes:
+            click.echo(theme.name)
+    else:
+        click.echo("Available themes:")
+        for theme in config.themes:
+            click.echo(f"  {theme.name}")
+            click.echo(f"    wallpaper: {theme.wallpaper}")
+            if theme.post_hooks:
+                click.echo(f"    hooks: {len(theme.post_hooks)}")
 
 
 @cli.command()
