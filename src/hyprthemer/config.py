@@ -5,6 +5,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
+# Image extensions supported for wallpaper glob expansion
+IMAGE_EXTENSIONS = frozenset({
+    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.tiff', '.tif'
+})
 
 CONFIG_PATH = Path.home() / ".config" / "hypr" / "hyprthemer.toml"
 DEFAULT_STATE_PATH = Path.home() / ".cache" / "hyprthemer" / "state.toml"
@@ -76,21 +80,49 @@ def load_config(config_path: Optional[Path] = None) -> Config:
             theme_name = theme_data.get('name', 'unknown')
             raise ConfigError(f"Theme '{theme_name}' missing required 'wallpaper' field")
         
-        wallpaper_path = expand_path(theme_data['wallpaper'])
-        if not wallpaper_path.exists():
-            theme_name = theme_data.get('name', wallpaper_path.name)
-            raise ConfigError(f"Wallpaper not found: {wallpaper_path}")
+        wallpaper_str = theme_data['wallpaper']
+        wallpaper_path = expand_path(wallpaper_str)
+        post_hooks = theme_data.get('post_hooks', [])
         
-        # Generate theme name from wallpaper filename if not specified
-        theme_name = theme_data.get('name')
-        if not theme_name:
-            theme_name = wallpaper_path.stem
-        
-        themes.append(ThemeConfig(
-            name=theme_name,
-            wallpaper=str(wallpaper_path),
-            post_hooks=theme_data.get('post_hooks', [])
-        ))
+        if '*' in wallpaper_str:
+            # Wildcard: expand to all matching images
+            if not wallpaper_path.parent.exists():
+                raise ConfigError(f"Wallpaper directory not found: {wallpaper_path.parent}")
+            
+            matches = sorted(wallpaper_path.parent.glob(wallpaper_path.name))
+            image_matches = [
+                p for p in matches
+                if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
+            ]
+            
+            if not image_matches:
+                raise ConfigError(
+                    f"No images found matching: {wallpaper_path}"
+                )
+            
+            name_prefix = theme_data.get('name', '')
+            for match in image_matches:
+                theme_name = f"{name_prefix}-{match.stem}" if name_prefix else match.stem
+                themes.append(ThemeConfig(
+                    name=theme_name,
+                    wallpaper=str(match.resolve()),
+                    post_hooks=post_hooks
+                ))
+        else:
+            # Single file
+            if not wallpaper_path.exists():
+                theme_name = theme_data.get('name', wallpaper_path.name)
+                raise ConfigError(f"Wallpaper not found: {wallpaper_path}")
+            
+            theme_name = theme_data.get('name')
+            if not theme_name:
+                theme_name = wallpaper_path.stem
+            
+            themes.append(ThemeConfig(
+                name=theme_name,
+                wallpaper=str(wallpaper_path.resolve()),
+                post_hooks=post_hooks
+            ))
     
     return Config(
         state_path=state_path,
@@ -129,5 +161,10 @@ wallpaper = "~/wallpapers/nord.png"
 post_hooks = [
     "notify-send 'Theme applied: nord'"
 ]
+
+# Wildcard: all images in a directory become separate themes
+# [[themes]]
+# wallpaper = "~/wallpapers/*"
+# name = "wp"  # Optional prefix: themes become "wp-tokyo-night", "wp-nord", etc.
 '''
 
